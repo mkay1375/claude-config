@@ -67,4 +67,11 @@ done < <(ps -Ao pid=,comm=)
 
 list=$(printf ', %s' "${others[@]}")
 echo "WARNING: ${#others[@]} other active Claude Code session(s) in $dir (pid: ${list:2})."
-echo "Follow the 'Parallel sessions' rule in ~/.claude/CLAUDE.md before editing anything."
+cat <<'EOF'
+Before editing anything:
+- If the current task depends on another session's task being finished, wait for that session
+  to finish, then start working.
+- Otherwise, ask the user whether to do the work in a new git worktree before creating one. If
+  they agree, do the work there (never in the shared checkout): create the worktree on a new
+  branch, do the job, commit, push, open a PR, and give the user the PR link.
+EOF
