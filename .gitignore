@@ -1,0 +1,8 @@
+# Allow-list: everything here is machine state, history, caches or account-synced
+# content unless named below.
+/*
+!/.gitignore
+!/CLAUDE.md
+!/RTK.md
+!/settings.json
+!/hooks/
