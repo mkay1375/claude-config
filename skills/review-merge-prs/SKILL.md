@@ -1,14 +1,29 @@
 ---
 name: review-merge-prs
-description: Review a list of GitHub PRs with the built-in code review, fix critical issues on each PR branch, and squash-merge them one by one.
-argument-hint: <pr-number> [pr-number ...]
+description: Review GitHub PRs (the ones given, or the open ones in .open-prs.txt) with the built-in code review, fix critical issues on each PR branch, and squash-merge them one by one.
+argument-hint: [pr-number ...]
 disable-model-invocation: true
 ---
 
-PRs to process: $ARGUMENTS
+PRs given: $ARGUMENTS
 
 Running this command is the authorization to push fixes to these PR branches and merge them.
 Do not stop to ask before merging.
+
+## 0. Pick the PRs from `.open-prs.txt`
+
+Sessions record the PRs they open in `.open-prs.txt` at the root of the main checkout
+(`$(git rev-parse --path-format=absolute --git-common-dir)/..`), one `<pr-url> <status>` line
+each, optionally followed by `# <comment>`. Status is `open` or `reviewing`.
+
+- If PRs were given above, process those, in that order.
+- Otherwise, if the file exists, process every line whose status is `open`, in file order. Skip
+  `reviewing` lines: another review run has them.
+- If neither gives any PR, say so and stop.
+
+Before triage, set the status of every processed PR that has a line in the file to `reviewing`.
+Other sessions append to this file while you work, so re-read it right before each write and
+change only the lines for this run's PRs.
 
 ## 1. Triage
 
@@ -51,3 +66,29 @@ For each PR:
 ## 4. Report
 
 A table: PR | critical issues found | fixed | merged / skipped (reason).
+
+## 5. Update `.open-prs.txt`
+
+Re-read the file, then for each PR this run processed that has a line in it:
+
+- Merged, by this run or before it: delete the line.
+- Still open: set its status back to `open` and replace any old comment with
+  `# <date>: <why it was not merged>`, e.g. `# 2026-09-30: CI failed on test_settle`.
+- Closed without merging: delete the line and mention it in the report.
+
+## 6. Clean up leftover worktrees
+
+Subagent worktrees that ended with commits are not cleaned up automatically. After the report,
+run `git worktree list` and pick out the worktrees this run's subagents left behind (each
+subagent's result names its worktree path and branch). If there are none, stop.
+
+Otherwise ask the user with AskUserQuestion (`multiSelect: true`) which ones to delete, one
+option per worktree labelled with its PR number and whether that PR was merged or skipped. A
+question takes at most four options, so split more than four worktrees across several questions.
+Never delete without asking. This command authorizes merging, not deleting worktrees, and a
+skipped PR's worktree may still hold work the user wants.
+
+For each worktree the user picks, run `git worktree remove <path>` and then
+`git branch -D <branch>` for its local branch. If `git worktree remove` refuses because of
+uncommitted changes, report it and leave it; don't retry with `--force` unless the user says to.
+Finish with `git worktree prune`.
