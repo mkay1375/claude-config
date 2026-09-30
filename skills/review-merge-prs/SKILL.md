@@ -1,6 +1,6 @@
 ---
 name: review-merge-prs
-description: Review GitHub PRs (the ones given, or the open ones in .open-prs.txt) with the built-in code review, fix critical issues on each PR branch, and squash-merge them one by one.
+description: Review GitHub PRs (the ones given, or your open ones on GitHub) with the built-in code review, fix critical issues on each PR branch, and squash-merge them one by one.
 argument-hint: [pr-number ...]
 disable-model-invocation: true
 ---
@@ -10,27 +10,25 @@ PRs given: $ARGUMENTS
 Running this command is the authorization to push fixes to these PR branches and merge them.
 Do not stop to ask before merging.
 
-## 0. Pick the PRs from `.open-prs.txt`
-
-Sessions record the PRs they open in `.open-prs.txt` at the root of the main checkout
-(`$(git rev-parse --path-format=absolute --git-common-dir)/..`), one `<pr-url> <status>` line
-each, optionally followed by `# <comment>`. Status is `open` or `reviewing`.
+## 0. Pick the PRs
 
 - If PRs were given above, process those, in that order.
-- Otherwise, if the file exists, process every line whose status is `open`, in file order. Skip
-  `reviewing` lines: another review run has them.
+- Otherwise, list your open, non-draft PRs on GitHub that no other run has claimed with
+  `gh pr list --state open --author @me --search '-label:reviewing -is:draft' --json number,title --jq 'sort_by(.number)'`
+  and process them oldest first.
 - If neither gives any PR, say so and stop.
 
-Before triage, set the status of every processed PR that has a line in the file to `reviewing`.
-Other sessions append to this file while you work, so re-read it right before each write and
-change only the lines for this run's PRs.
-
-## 1. Triage
+## 1. Triage and claim
 
 For each PR run
-`gh pr view <n> --json number,title,state,isDraft,mergeable,reviewDecision,statusCheckRollup,headRefName`.
-Skip, and report why, any PR that is closed, a draft, has merge conflicts, or has changes
-requested.
+`gh pr view <n> --json number,title,state,isDraft,mergeable,reviewDecision,statusCheckRollup,headRefName,labels`.
+Skip, and report why, any PR that is closed, a draft, has merge conflicts, has changes
+requested, or already carries the `reviewing` label (another review run has it).
+
+Claim every PR that survives triage so a concurrent run leaves it alone: make sure the label
+exists with `gh label create reviewing --color FBCA04 --description "A review-merge-prs run has this PR" --force`,
+then `gh pr edit <n> --add-label reviewing`. From here on, every PR this run claimed must lose
+the label before the run ends (step 4), whatever happens to it.
 
 ## 2. Review and fix: one subagent per PR, in parallel
 
@@ -63,18 +61,15 @@ For each PR:
 5. Before the next PR: if it now conflicts or is behind its base, run
    `gh pr update-branch <n>` and wait for CI again. Skip it if either fails.
 
-## 4. Report
+## 4. Release the claims
+
+For every PR this run labelled in step 1, merged or skipped, run
+`gh pr edit <n> --remove-label reviewing`. Do this even when the run stops early; a label left
+behind hides the PR from every later run until someone removes it by hand.
+
+## 5. Report
 
 A table: PR | critical issues found | fixed | merged / skipped (reason).
-
-## 5. Update `.open-prs.txt`
-
-Re-read the file, then for each PR this run processed that has a line in it:
-
-- Merged, by this run or before it: delete the line.
-- Still open: set its status back to `open` and replace any old comment with
-  `# <date>: <why it was not merged>`, e.g. `# 2026-09-30: CI failed on test_settle`.
-- Closed without merging: delete the line and mention it in the report.
 
 ## 6. Clean up leftover worktrees
 
