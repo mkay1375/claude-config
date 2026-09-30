@@ -10,6 +10,15 @@
             "command": "rtk hook claude"
           }
         ]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/notify.sh \"Claude is asking you a question\""
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -18,6 +27,16 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/other-sessions.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/notify.sh"
           }
         ]
       }
