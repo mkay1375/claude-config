@@ -27,5 +27,7 @@ Reviewed at <full 40-character SHA of the PR head once the review's fixes are pu
 
 followed by one line saying which review ran (e.g. `/code-review high --fix`). If the review
 happened before the PR existed, post the comment right after opening the PR. Use
-`gh pr comment <n> --body "..."`. Any later commit on the
+`gh pr comment <n> --body "..."` on GitHub, or
+`glab api -X POST "projects/:id/merge_requests/<n>/notes" -f body="..."` for a GitLab MR
+(gitlab.com or self-hosted). Any later commit on the
 branch makes the PR unreviewed again; `/merge-prs` relies on this to skip PRs already reviewed.
