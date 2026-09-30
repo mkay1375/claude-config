@@ -27,17 +27,11 @@ deleting anything.
    from inside a linked worktree.
 2. Pick the remote: the one the default branch tracks, else `origin`, else the only remote. With no
    remote, skip everything remote and say so.
-3. Take the host from `git remote get-url <remote>` (`git@host:path`, `ssh://git@host:port/path`
-   or `https://host/path`) and pick the tool:
-   - `gh auth status --hostname <host>` succeeds (github.com or GitHub Enterprise) → **GitHub**, use
-     `gh`.
-   - Else `glab auth status --hostname <host>` succeeds (gitlab.com or a self-hosted GitLab) →
-     **GitLab**, use `glab`. It finds the host from the git remote on its own.
-   - Else **plain git**: the host has no CLI here (Gitea, Bitbucket, a bare SSH server, or a
-     GitHub/GitLab you are not logged in to). The run still works, but it cannot see PR/MR state
-     or protected branches. If the host looks like GitHub or GitLab, suggest
-     `gh auth login --hostname <host>` or `glab auth login --hostname <host>` and carry on with
-     plain git.
+3. Pick the tool for the remote's host: `gh` if `gh auth status --hostname <host>` succeeds
+   (GitHub, including Enterprise), else `glab` if `glab auth status --hostname <host>` succeeds
+   (GitLab, including self-hosted, whose URL often doesn't say "gitlab"). Otherwise use plain git:
+   the run still works on any server but cannot see PR/MR state or protected branches; if the host
+   looks like GitHub or GitLab, suggest logging in with that CLI.
 4. `git fetch --prune <remote>` so remote-tracking branches match the server.
 5. The default branch: `git symbolic-ref --short refs/remotes/<remote>/HEAD` (strip the remote
    prefix). If that is unset, run `git remote set-head <remote> --auto` and try again; failing
@@ -45,15 +39,9 @@ deleting anything.
 
 ## 2. Gather what the server knows (GitHub / GitLab only)
 
-Fetch this once, not per branch:
-
-| What | GitHub | GitLab |
-| --- | --- | --- |
-| Your login | `gh api user --jq .login` | `glab api user \| jq -r .username` |
-| Open PRs/MRs by head branch | `gh pr list --state open --limit 500 --json headRefName,number,author` | `glab mr list -P 100 -F json --jq '.[] \| {source_branch, iid, author: .author.username}'` (add `-p 2`, `-p 3`… while pages come back full) |
-| Merged PRs/MRs | `gh pr list --state merged --limit 500 --json headRefName,number,mergedAt` | `glab mr list --merged -P 100 -F json --jq '.[] \| {source_branch, iid, merged_at}'` |
-| Closed, unmerged | `gh pr list --state closed --limit 500 --json headRefName,number,closedAt,mergedAt` (keep `mergedAt == null`) | `glab mr list --closed -P 100 -F json --jq '.[] \| {source_branch, iid, closed_at}'` |
-| Protected branches | `gh api "repos/{owner}/{repo}/branches?protected=true" --paginate --jq '.[].name'` | `glab api --paginate "projects/:id/protected_branches" \| jq -r '.[].name'` |
+Fetch once, in bulk rather than per branch, with JSON output: your login; open, merged and
+closed-unmerged PRs/MRs with their head branch, number, author and dates; and the protected
+branches. Page through all results; list commands cap how many they return by default.
 
 Protected-branch entries can be wildcards (`release/*`); treat them as globs. If a call fails for
 lack of permission, carry on without it and say which data is missing. A branch name can have had
