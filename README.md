@@ -11,6 +11,7 @@ My user-level [Claude Code](https://claude.com/claude-code) configuration: the c
 | `hooks/other-sessions.sh` | `SessionStart` hook that warns when another busy Claude Code session shares the working directory |
 | `skills/review-merge-prs/` | `/review-merge-prs <n>...`: reviews each PR in its own worktree subagent, fixes critical issues, squash-merges them in order |
 | `skills/rephrase/` | `/rephrase [focus]`: rewrites the previous answer shorter and in plainer words, keeping every fact |
+| `skills/summarize/` | `/summarize [input] [focus]`: summarizes a file, URL, pasted text or the conversation as one paragraph plus a bulleted or numbered list, shaped around what you want |
 
 ## What is not tracked
 
