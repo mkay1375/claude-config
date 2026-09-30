@@ -1,6 +1,6 @@
 ---
 name: merge-prs
-description: Squash-merge GitHub PRs (the ones given, or your open ones on GitHub) one by one, first reviewing with the built-in code review only those not yet reviewed at their head commit or that may clash with other PRs, and fixing critical issues on their branches.
+description: Squash-merge PRs on GitHub or MRs on GitLab, including self-hosted (the ones given, or your open ones) one by one, first reviewing with the built-in code review only those not yet reviewed at their head commit or that may clash with other PRs, and fixing critical issues on their branches.
 argument-hint: [pr-number ...]
 disable-model-invocation: true
 ---
@@ -9,6 +9,22 @@ PRs given: $ARGUMENTS
 
 Running this command is the authorization to push fixes to these PR branches and merge them.
 Do not stop to ask before merging.
+
+## Git server
+
+The commands below are for GitHub. Find the server from `origin`'s host: `gh auth status
+--hostname <host>` succeeding means GitHub (including Enterprise), `glab auth status --hostname
+<host>` means GitLab (including self-hosted, whose URL often doesn't say "gitlab"). If neither is
+logged in, ask the user to log in and stop. On GitLab, "PR" means merge request and you use the
+`glab` equivalents; tell subagents which server it is. Watch for:
+
+- `glab mr merge` sets auto-merge by default; pass `--auto-merge=false` so it merges now, after
+  the CI wait, and `--sha <head>` so only the reviewed commit is merged.
+- Post the `Reviewed at` marker as a plain MR note through the API
+  (`glab api -X POST "projects/:id/merge_requests/<n>/notes" -f body=...`); `glab mr note` is
+  experimental.
+- "Changes requested" is `detailed_merge_status == "requested_changes"` in `glab mr view -F json`.
+- Run the built-in `code-review` on the checked-out MR branch, without an MR number.
 
 ## 0. Pick the PRs
 
@@ -114,4 +130,5 @@ skipped PR's worktree may still hold work the user wants.
 For each worktree the user picks, run `git worktree remove <path>` and then
 `git branch -D <branch>` for its local branch. If `git worktree remove` refuses because of
 uncommitted changes, report it and leave it; don't retry with `--force` unless the user says to.
-Finish with `git worktree prune`.
+Finish with `git worktree prune`. For a wider sweep of stale worktrees and branches, point the
+user to `/cleanup`.
