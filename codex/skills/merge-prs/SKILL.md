@@ -64,8 +64,10 @@ run added, and release it in step 5 even if the run fails or is interrupted.
 A request needs review if either condition holds:
 
 - **No review at its current head.** Accept either a comment's exact first line or an exact
-  standalone line in the request description: `Reviewed at <current head SHA>`. The SHA must
-  be the full current 40-character head. A description can record review evidence like this:
+  standalone line in the request description: `Reviewed at <current head SHA>`. The description
+  marker must start the body or follow a blank line, outside quotes, code and HTML blocks.
+  This boundary avoids treating lazy quote/list continuations as completed reviews. The SHA
+  must be the full current 40-character head. A description can record review evidence like this:
 
   ```text
   Reviewed at 0123456789abcdef0123456789abcdef01234567
@@ -73,7 +75,8 @@ A request needs review if either condition holds:
   ```
 
   This example is a template, not evidence for another SHA. Vague claims such as "reviewed",
-  abbreviated or older SHAs, blockquotes and fenced examples do not certify the current head.
+  abbreviated or older SHAs, blockquotes, fenced examples and HTML examples/comments do not
+  certify the current head. Put a blank line between a review heading and the actual marker.
   Existing descriptions without a full-head marker need review once; when completing that
   review, post the standard comment marker below so later runs can reuse it.
 

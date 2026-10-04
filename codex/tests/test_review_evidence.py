@@ -18,7 +18,7 @@ class ReviewEvidenceTests(unittest.TestCase):
         return MODULE.review_evidence({"headRefOid": head, "body": body, "comments": comments or []})
 
     def test_description_review_can_skip_repeated_review(self):
-        evidence = self.check_evidence("## Review\nReviewed at " + HEAD + "\nCodex review against origin/main; checks passed")
+        evidence = self.check_evidence("## Review\n\nReviewed at " + HEAD + "\nCodex review against origin/main; checks passed")
         self.assertTrue(evidence["reviewed"])
         self.assertEqual(evidence["source"], "description")
 
@@ -42,7 +42,37 @@ class ReviewEvidenceTests(unittest.TestCase):
         for fence in ["```", "~~~", "````"]:
             with self.subTest(fence=fence):
                 self.assertFalse(self.check_evidence(fence + "text\nReviewed at " + HEAD + "\n" + fence)["reviewed"])
-                self.assertTrue(self.check_evidence(fence + "text\nexample\n" + fence + "\nReviewed at " + HEAD)["reviewed"])
+                self.assertTrue(self.check_evidence(fence + "text\nexample\n" + fence + "\n\nReviewed at " + HEAD)["reviewed"])
+
+    def test_lazy_quote_and_list_examples_do_not_certify_review(self):
+        for prefix in ["> Example review marker:", "- Example review marker:", "## Review"]:
+            with self.subTest(prefix=prefix):
+                self.assertFalse(self.check_evidence(prefix + "\nReviewed at " + HEAD)["reviewed"])
+        self.assertTrue(self.check_evidence("> Prior discussion\n\nReviewed at " + HEAD)["reviewed"])
+
+    def test_html_examples_and_comments_remain_masked_across_blank_lines(self):
+        blocks = [("<pre>", "</pre>"), ("<script>", "</script>"),
+                  ("<style>", "</style>"), ("<textarea>", "</textarea>"),
+                  ("<!--", "-->"), ("<![CDATA[", "]]>"), ("<?example", "?>")]
+        for opening, closing in blocks:
+            for gap in ["\n", "\n\n"]:
+                with self.subTest(opening=opening, gap=gap):
+                    body = opening + gap + "Reviewed at " + HEAD + "\n" + closing
+                    self.assertFalse(self.check_evidence(body)["reviewed"])
+                    self.assertTrue(self.check_evidence(body + "\n\nReviewed at " + HEAD)["reviewed"])
+
+    def test_generic_html_block_and_declaration_are_not_review_evidence(self):
+        for opening, closing in [("<div>", "</div>"), ("<custom-tag>", "</custom-tag>"),
+                                 ("<!DOCTYPE", ">")]:
+            with self.subTest(opening=opening):
+                body = opening + "\nReviewed at " + HEAD + "\n" + closing
+                self.assertFalse(self.check_evidence(body)["reviewed"])
+                self.assertTrue(self.check_evidence(body + "\n\nReviewed at " + HEAD)["reviewed"])
+
+    def test_nested_or_reopened_raw_html_does_not_certify_review(self):
+        for opening in ["<div>\n<pre>", "</pre><pre>", "<!-- closed --><!--"]:
+            with self.subTest(opening=opening):
+                self.assertFalse(self.check_evidence(opening + "\n\nReviewed at " + HEAD)["reviewed"])
 
     def test_comment_marker_must_be_first_line(self):
         self.assertFalse(self.check_evidence(comments=[{"body": "Example:\nReviewed at " + HEAD}])["reviewed"])
@@ -52,7 +82,7 @@ class ReviewEvidenceTests(unittest.TestCase):
         self.assertTrue(MODULE.review_evidence({"sha": HEAD, "description": None, "notes": [{"body": "Reviewed at " + HEAD}]})["reviewed"])
 
     def test_crlf_markers(self):
-        self.assertTrue(self.check_evidence("## Review\r\nReviewed at " + HEAD + "\r\nVerified.")["reviewed"])
+        self.assertTrue(self.check_evidence("## Review\r\n\r\nReviewed at " + HEAD + "\r\nVerified.")["reviewed"])
 
     def test_incomplete_or_invalid_head_cannot_be_certified(self):
         for head in [None, HEAD[:7], "g" * 40]:

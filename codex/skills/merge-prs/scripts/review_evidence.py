@@ -8,19 +8,64 @@ import sys
 from pathlib import Path
 
 
+HTML_START = re.compile(r"<!--|<!\[CDATA\[|<\?|<(pre|script|style|textarea)(?=\s|>|$)|^ {0,3}<![A-Z]", re.IGNORECASE)
+
+
+def remaining_html_end(line, end=None):
+    """Track raw HTML through the line, including another opening after a close."""
+    position = 0
+    while True:
+        if end is not None:
+            closing = re.search(end, line[position:], re.IGNORECASE)
+            if closing is None:
+                return end
+            position += closing.end()
+        opening = HTML_START.search(line, position)
+        if opening is None:
+            return None
+        token = opening.group().lstrip()
+        end = (r"</" + opening.group(1) + r"\s*>" if opening.group(1) else
+               {"<!--": r"-->", "<![CDATA[": r"\]\]>", "<?": r"\?>"}.get(token.upper(), r">"))
+        position = opening.end()
+
+
 def description_has_marker(body, marker):
-    """Ignore fenced examples; only an exact, standalone line records a review."""
+    """Require a top-level paragraph boundary and reject fenced/HTML examples."""
     fence = None
-    for line in body.splitlines():
+    html_end = None
+    html_until_blank = False
+    lines = body.splitlines()
+    for index, line in enumerate(lines):
+        if html_end is not None:
+            html_end = remaining_html_end(line, html_end)
+            continue
+        if html_until_blank:
+            if line.strip():
+                html_end = remaining_html_end(line)
+                continue
+            html_until_blank = False
         delimiter = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+        if fence is not None:
+            if delimiter:
+                token, rest = delimiter.groups()
+                if token[0] == fence[0] and len(token) >= len(fence) and not rest.strip():
+                    fence = None
+            continue
         if delimiter:
             token, rest = delimiter.groups()
-            if fence is None:
-                fence = token
-            elif token[0] == fence[0] and len(token) >= len(fence) and not rest.strip():
-                fence = None
+            fence = token
             continue
-        if fence is None and line == marker:
+        # Raw HTML blocks/comments remain masked across blank lines. Be conservative
+        # about inline starts too: their content can be hidden by the renderer.
+        if HTML_START.search(line):
+            html_end = remaining_html_end(line)
+            continue
+        if re.match(r"^ {0,3}</?[A-Za-z][A-Za-z0-9-]*(?=\s|/?>|$)", line):
+            # Generic HTML blocks end at a blank line, as in CommonMark. We do
+            # not attempt to interpret ambiguous markup as positive evidence.
+            html_until_blank = True
+            continue
+        if line == marker and (index == 0 or not lines[index - 1].strip()):
             return True
     return False
 
