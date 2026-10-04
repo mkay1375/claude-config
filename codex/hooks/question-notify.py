@@ -75,7 +75,7 @@ def notification_command(message, system, environment):
         if system == "wsl":
             entries = [entry for entry in environment.get("WSLENV", "").split(":")
                        if entry and entry.split("/", 1)[0] != "CODEX_QUESTION_NOTIFY_MSG"]
-            additions["WSLENV"] = ":".join(entries + ["CODEX_QUESTION_NOTIFY_MSG/u"])
+            additions["WSLENV"] = ":".join(entries + ["CODEX_QUESTION_NOTIFY_MSG/w"])
         return ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
                 POWERSHELL_SCRIPT], additions
     return [], {}

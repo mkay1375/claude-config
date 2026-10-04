@@ -91,7 +91,7 @@ class NotificationCommandTests(unittest.TestCase):
     def test_wsl_preserves_existing_exports_without_duplicate(self):
         _, env = notify.notification_command(self.MESSAGE, "wsl",
                   {"WSLENV": "PATH/l:CODEX_QUESTION_NOTIFY_MSG/p:OTHER/u"})
-        self.assertEqual(env["WSLENV"], "PATH/l:OTHER/u:CODEX_QUESTION_NOTIFY_MSG/u")
+        self.assertEqual(env["WSLENV"], "PATH/l:OTHER/u:CODEX_QUESTION_NOTIFY_MSG/w")
 
     def test_dry_run_never_executes_alert(self):
         stdout = io.StringIO()
