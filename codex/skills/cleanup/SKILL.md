@@ -72,9 +72,10 @@ For each other worktree record: path, branch (or detached SHA), last commit date
 
 Categories:
 - **Gone**: prunable. Removed by `git worktree prune`, no data at risk.
-- **Merged**: its branch is merged (or detached at a commit already in `<default>`), clean, not
-  locked, not in use.
-- **Inactive**: last commit older than `--days`, clean, not locked, not in use.
+- **Merged**: its branch is merged (or detached at a commit already in `<default>`), clean,
+  with no unpushed commits, not locked, not in use.
+- **Inactive**: last commit older than `--days`, clean, with no unpushed commits, not locked,
+  not in use.
 - **Needs a look**: anything else that is merged or inactive but dirty, unpushed, locked or in use.
   Offered only on its own, never grouped with the safe ones.
 
