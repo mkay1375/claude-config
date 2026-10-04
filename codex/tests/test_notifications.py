@@ -45,6 +45,22 @@ class QuestionParsingTests(unittest.TestCase):
         payload["tool_name"] = "request_user_input"
         self.assertIsNone(notify.question_message(payload))
 
+    def test_codex_async_title_prompts_and_count(self):
+        payload = event(tool="request_user_input_async", questions=[
+            {"title": "Which audience?", "options": ["Developers", "Managers"]},
+            {"title": "How detailed?"}, {"title": ""}])
+        self.assertEqual(notify.question_message(payload), "Which audience? (+1 more)")
+        stdout = io.StringIO()
+        with patch("sys.stdin", io.StringIO(json.dumps(payload))), \
+             patch.object(notify.subprocess, "run") as run, \
+             contextlib.redirect_stdout(stdout):
+            self.assertEqual(notify.main(["--dry-run", "--platform", "macos"]), 0)
+        run.assert_not_called()
+        self.assertEqual(json.loads(stdout.getvalue())["argv"][-1],
+                         "Which audience? (+1 more)")
+        payload["tool_name"] = "request_user_input"
+        self.assertIsNone(notify.question_message(payload))
+
     def test_json_unicode_quotes_controls_and_invalid_entries(self):
         payload = json.loads(r'{"hook_event_name":"PreToolUse","tool_name":"request_user_input",'
                              r'"tool_input":{"questions":[null,{}, {"question":false},'

@@ -42,8 +42,14 @@ def question_message(payload):
     values = []
     if isinstance(questions, list):
         for entry in questions:
-            if isinstance(entry, dict) and isinstance(entry.get("question"), str):
-                question = " ".join(entry["question"].replace("\0", " ").split())
+            if not isinstance(entry, dict):
+                continue
+            # Codex's async input tool puts the prompt in title; sync uses question.
+            question = entry.get("title") if tool == "request_user_input_async" else None
+            if not isinstance(question, str) or not question.strip():
+                question = entry.get("question")
+            if isinstance(question, str):
+                question = " ".join(question.replace("\0", " ").split())
                 if question:
                     values.append(question)
     # Some clients expose an async tool with one top-level question instead.

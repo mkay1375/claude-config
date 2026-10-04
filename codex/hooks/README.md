@@ -11,10 +11,13 @@ Do not write trust records or use a trust-bypass flag as part of installation.
 Changing the definition requires another review. See the
 [official hook trust flow](https://learn.chatgpt.com/docs/hooks#review-and-trust-hooks).
 
-The notification contains the first nonempty `tool_input.questions[].question`
-and the number of further questions. It accepts only `PreToolUse` for the exact
-local names `request_user_input` and `request_user_input_async`; for an async
-client that sends `tool_input.question`, it also accepts that single question.
+The notification contains the first nonempty prompt and the number of further
+questions. It accepts only `PreToolUse` for the exact local names
+`request_user_input` and `request_user_input_async`. The synchronous tool sends
+`tool_input.questions[].question`; Codex's async tool sends
+`tool_input.questions[].title` with optional string `options`. For compatibility
+with other async clients, the script also accepts `questions[].question` or
+a single top-level `tool_input.question`. Only async calls may use `title`.
 Other tools, post-tool events, malformed inputs, and empty questions do nothing.
 
 The [official hook coverage](https://learn.chatgpt.com/docs/hooks#tool-coverage)
