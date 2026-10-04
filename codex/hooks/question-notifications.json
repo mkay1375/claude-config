@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^request_user_input(_async)?$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.codex/hooks/question-notify.py\"",
+            "commandWindows": "py -3 -c \"import os,runpy;runpy.run_path(os.path.expanduser('~/.codex/hooks/question-notify.py'),run_name='__main__')\"",
+            "timeout": 7
+          }
+        ]
+      }
+    ]
+  }
+}
